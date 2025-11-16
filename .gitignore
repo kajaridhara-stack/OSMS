@@ -1,0 +1,9 @@
+# Backend
+school backend/node_modules
+school backend/.env
+
+# Frontend
+schoolFrontend/node_modules
+
+# Logs
+*.log
