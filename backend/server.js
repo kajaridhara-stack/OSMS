@@ -36,26 +36,37 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
   try {
     transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // use TLS
+      port: 465,
+      secure: true, // use SSL
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
       },
-      // Add timeout settings to prevent hanging
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-      socketTimeout: 5000,
-      // Disable DNS resolution issues
-      tls: {
-        rejectUnauthorized: false
-      }
+      // Increase timeout settings
+      connectionTimeout: 60000, // 60 seconds
+      greetingTimeout: 30000,
+      socketTimeout: 60000,
+      pool: true, // use pooled connections
+      maxConnections: 5,
+      maxMessages: 100
     });
     
     console.log('📧 Email service configured (will attempt to send when needed)');
     
-    // Don't verify on startup - just try when sending
-    // Verification can slow down/block server startup
+    // Verify connection in background (non-blocking)
+    transporter.verify((error, success) => {
+      if (error) {
+        console.warn('⚠️ Email verification failed:', error.message);
+        console.warn('⚠️ Please check:');
+        console.warn('   1. EMAIL_USER is correct Gmail address');
+        console.warn('   2. EMAIL_PASS is a valid App Password (not regular password)');
+        console.warn('   3. 2-Step Verification is enabled in Google Account');
+        console.warn('   4. App Password is generated from https://myaccount.google.com/apppasswords');
+      } else {
+        console.log('✅ Email service verified and ready to send');
+      }
+    });
+    
   } catch (error) {
     console.warn('⚠️ Email configuration failed:', error.message);
     transporter = null;
@@ -297,7 +308,7 @@ function generatePassword() {
   return password;
 }
 
-// Send email to student
+// Send email to student with retry logic
 async function sendStudentCredentials(email, studentId, password, name) {
   // If email is not configured, skip sending
   if (!transporter) {
@@ -306,44 +317,62 @@ async function sendStudentCredentials(email, studentId, password, name) {
   }
 
   const mailOptions = {
-    from: process.env.EMAIL_USER || 'noreply@school.com',
+    from: `"INTELLION School System" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: 'Welcome to School Management System - Your Login Credentials',
+    subject: 'Welcome to INTELLION - Your Login Credentials',
     html: `
       <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;">
         <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px;">
-          <h2 style="color: #1e3c72;">Welcome to Our School Management System</h2>
-          <p>Dear ${name},</p>
+          <h2 style="color: #1e3c72;">🎓 Welcome to INTELLION School Management System</h2>
+          <p>Dear <strong>${name}</strong>,</p>
           <p>Your student account has been successfully created. Below are your login credentials:</p>
           
           <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
-            <p style="margin: 10px 0;"><strong>Student ID:</strong> ${studentId}</p>
-            <p style="margin: 10px 0;"><strong>Password:</strong> ${password}</p>
+            <p style="margin: 10px 0;"><strong>Student ID:</strong> <code style="background: #e3e3e3; padding: 5px 10px; border-radius: 3px;">${studentId}</code></p>
+            <p style="margin: 10px 0;"><strong>Password:</strong> <code style="background: #e3e3e3; padding: 5px 10px; border-radius: 3px;">${password}</code></p>
           </div>
           
-          <p>Please keep these credentials safe and do not share them with anyone.</p>
-          <p>You can now login to view your:</p>
+          <p>⚠️ <strong>Important:</strong> Please keep these credentials safe and do not share them with anyone.</p>
+          <p>You can now login to access your:</p>
           <ul>
-            <li>Class Timetable</li>
-            <li>Fee Structure</li>
-            <li>Library Card</li>
+            <li>📅 Class Timetable</li>
+            <li>💰 Fee Structure</li>
+            <li>📚 Library Card</li>
           </ul>
           
-          <p style="margin-top: 30px;">Best regards,<br>School Administration</p>
+          <p style="margin-top: 30px; color: #666;">Best regards,<br><strong>INTELLION School Administration</strong></p>
         </div>
       </div>
     `
   };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent to:', email);
-    return true;
-  } catch (error) {
-    console.error('⚠️ Email send error (non-critical):', error.message);
-    // Return true anyway so student creation succeeds even if email fails
-    return true;
+  // Retry logic - try up to 3 times
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      console.log(`📧 Attempting to send email to ${email} (attempt ${attempt}/3)...`);
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Email successfully sent to: ${email}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Email send attempt ${attempt} failed:`, error.message);
+      
+      if (attempt === 3) {
+        console.error('⚠️ All email send attempts failed. Possible issues:');
+        console.error('   - Invalid App Password');
+        console.error('   - 2-Step Verification not enabled');
+        console.error('   - Gmail blocking the connection');
+        console.error('   - Network/firewall issues');
+        // Return true anyway so student creation succeeds
+        return true;
+      }
+      
+      // Wait before retry (2 seconds)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
   }
+  
+  // Should never reach here but return true anyway
+  return true;
 }
 
 // Register Student (Admin only)
