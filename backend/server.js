@@ -29,13 +29,30 @@ mongoose.connect(process.env.MONGO_URL, {
 .catch(err => console.error('❌ MongoDB Connection Error:', err.message));
 
 // Email Configuration (Configure with your email service)
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // You can use other services like SendGrid, Outlook, etc.
-  auth: {
-     user: 'kajaridhara@gmail.com', // Your email
-     pass: 'oipb lfou zjlj frbb' // App password (not your regular password)
+// Email is optional - if not configured, the system will still work
+let transporter = null;
+
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  try {
+    transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      },
+      // Add timeout settings to prevent hanging
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000
+    });
+    console.log('📧 Email service configured');
+  } catch (error) {
+    console.warn('⚠️ Email configuration failed:', error.message);
+    transporter = null;
   }
-});
+} else {
+  console.warn('⚠️ Email not configured (EMAIL_USER and EMAIL_PASS environment variables not set)');
+}
 
 // ============= SCHEMAS =============
 
@@ -272,8 +289,14 @@ function generatePassword() {
 
 // Send email to student
 async function sendStudentCredentials(email, studentId, password, name) {
+  // If email is not configured, skip sending
+  if (!transporter) {
+    console.log('ℹ️ Email not configured - skipping email send to:', email);
+    return true; // Return true so the process continues
+  }
+
   const mailOptions = {
-    from: 'your-email@gmail.com',
+    from: process.env.EMAIL_USER || 'noreply@school.com',
     to: email,
     subject: 'Welcome to School Management System - Your Login Credentials',
     html: `
@@ -307,8 +330,9 @@ async function sendStudentCredentials(email, studentId, password, name) {
     console.log('✅ Email sent to:', email);
     return true;
   } catch (error) {
-    console.error('❌ Email send error:', error);
-    return false;
+    console.error('⚠️ Email send error (non-critical):', error.message);
+    // Return true anyway so student creation succeeds even if email fails
+    return true;
   }
 }
 

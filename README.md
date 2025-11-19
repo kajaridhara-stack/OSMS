@@ -31,18 +31,39 @@ OSMS/
   .gitignore
   README.md
 
-How to Run Locally
+## How to Run Locally
 
-Navigate to backend folder
+1. **Navigate to backend folder**
 
-Install dependencies
-
+2. **Install dependencies**
+```bash
 npm install
+```
 
+3. **Configure Environment Variables**
+   - Copy `.env.example` to `.env`
+   - Set your MongoDB connection string in `MONGO_URL`
+   - Set a secure JWT secret in `JWT_SECRET`
+   - (Optional) Configure email settings if you want to send credentials to students
 
-Start server
-
+4. **Start server**
+```bash
 node server.js
+```
 
+5. **Open the frontend** `index.html` in a browser to use the system.
 
-Open the frontend index.html in a browser to use the system.
+## Environment Variables
+
+Create a `.env` file in the `backend` folder with:
+
+```env
+MONGO_URL=your_mongodb_connection_string
+JWT_SECRET=your_secure_random_string
+# Optional - Email configuration (system works without this)
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASS=your-app-password
+PORT=5000
+```
+
+**Note:** Email configuration is optional. The system will work without it, but students won't receive their credentials via email.

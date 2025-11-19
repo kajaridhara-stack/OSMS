@@ -779,7 +779,10 @@
     </div>
 
     <script>
-        const API_URL = 'https://osms-suhn.onrender.com/api';
+        // Auto-detect environment: use Render URL in production, localhost in development
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:'
+            ? 'http://localhost:5000/api'
+            : 'https://osms-suhn.onrender.com/api';
         let currentUser = null;
         let token = localStorage.getItem('token');
         let currentAuthType = 'admin';
