@@ -35,17 +35,32 @@ let transporter = null;
 if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
   try {
     transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // use TLS
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
       },
       // Add timeout settings to prevent hanging
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-      socketTimeout: 5000
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
+      // Disable DNS resolution issues
+      tls: {
+        rejectUnauthorized: false
+      }
     });
-    console.log('📧 Email service configured');
+    
+    // Verify connection configuration
+    transporter.verify(function(error, success) {
+      if (error) {
+        console.warn('⚠️ Email verification failed:', error.message);
+        transporter = null;
+      } else {
+        console.log('📧 Email service configured and verified');
+      }
+    });
   } catch (error) {
     console.warn('⚠️ Email configuration failed:', error.message);
     transporter = null;
