@@ -43,24 +43,19 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         pass: process.env.EMAIL_PASS
       },
       // Add timeout settings to prevent hanging
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000,
       // Disable DNS resolution issues
       tls: {
         rejectUnauthorized: false
       }
     });
     
-    // Verify connection configuration
-    transporter.verify(function(error, success) {
-      if (error) {
-        console.warn('⚠️ Email verification failed:', error.message);
-        transporter = null;
-      } else {
-        console.log('📧 Email service configured and verified');
-      }
-    });
+    console.log('📧 Email service configured (will attempt to send when needed)');
+    
+    // Don't verify on startup - just try when sending
+    // Verification can slow down/block server startup
   } catch (error) {
     console.warn('⚠️ Email configuration failed:', error.message);
     transporter = null;
