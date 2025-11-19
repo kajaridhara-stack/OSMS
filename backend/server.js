@@ -378,16 +378,39 @@ async function sendStudentCredentials(email, studentId, password, name) {
 // Register Student (Admin only)
 app.post('/api/students', authenticateToken, isAdmin, async (req, res) => {
   console.log('👨‍🎓 Registering student');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  
   try {
     const { name, email, class: studentClass, rollNumber, address, phoneNumber, dob } = req.body;
 
+    // Validate required fields
+    if (!name || !email || !studentClass || !rollNumber || !address || !phoneNumber || !dob) {
+      console.error('❌ Missing required fields');
+      return res.status(400).json({ 
+        message: 'All fields are required',
+        missing: {
+          name: !name,
+          email: !email,
+          class: !studentClass,
+          rollNumber: !rollNumber,
+          address: !address,
+          phoneNumber: !phoneNumber,
+          dob: !dob
+        }
+      });
+    }
+
     // Generate unique student ID
     const studentId = generateStudentId(studentClass, rollNumber);
+    console.log('Generated student ID:', studentId);
 
     // Check if student with same roll number and class exists
     const existingStudent = await Student.findOne({ class: studentClass, rollNumber });
     if (existingStudent) {
-      return res.status(400).json({ message: 'Student with this roll number already exists in this class' });
+      console.error('❌ Duplicate student - Roll Number:', rollNumber, 'Class:', studentClass);
+      return res.status(400).json({ 
+        message: `Student with roll number ${rollNumber} already exists in class ${studentClass}` 
+      });
     }
 
     // Generate password
