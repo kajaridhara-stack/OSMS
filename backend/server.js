@@ -627,6 +627,22 @@ app.get('/api/fees/:class', authenticateToken, async (req, res) => {
   }
 });
 
+// Root route - welcome message
+app.get('/', (req, res) => {
+  res.json({ 
+    message: '🎓 INTELLION - School Management System API',
+    status: 'Running',
+    endpoints: {
+      test: '/api/test',
+      auth: '/api/auth/*',
+      students: '/api/students',
+      library: '/api/library/*',
+      timetable: '/api/timetable',
+      fees: '/api/fees'
+    }
+  });
+});
+
 // Test route
 app.get('/api/test', (req, res) => {
   res.json({ message: 'School Management System API is working!' });
@@ -634,8 +650,8 @@ app.get('/api/test', (req, res) => {
 
 // 404 handler
 app.use((req, res) => {
-  console.log('❌ 404 - Route not found:', req.path);
-  res.status(404).json({ message: 'Route not found' });
+  console.log('⚠️ 404 - Route not found:', req.path);
+  res.status(404).json({ message: 'Route not found', path: req.path });
 });
 
 // Start server
